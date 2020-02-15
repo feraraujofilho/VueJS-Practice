@@ -1,9 +1,7 @@
 <template>
   <div class="question-box-container">
     <b-jumbotron>
-      <template v-slot:lead>
-        {{ currentQuestion.question }}
-      </template>
+      <template v-slot:lead>{{ currentQuestion.question }}</template>
 
       <hr class="my-4" />
 
@@ -12,27 +10,34 @@
           v-for="answer in answers"
           :key="answer"
           @click="selectAnswer(answer)"
-          :class="[selectedAnswer === answer ? 'selected' : '']"
-        >
-          {{ answer }}
-        </b-list-group-item>
+          :class="answerClass(answer)"
+        >{{ answer }}</b-list-group-item>
       </b-list-group>
 
-      <b-button variant="primary" href="#">Submit</b-button>
-      <b-button @click="next" variant="success" href="#">Next </b-button>
+      <b-button
+        variant="primary"
+        @click="submitAnswer"
+        :disabled="selectedAnswer === null || answered"
+      >Submit</b-button>
+      <b-button @click="next" variant="success">Next</b-button>
     </b-jumbotron>
   </div>
 </template>
 
 <script>
+import _ from "lodash";
 export default {
   props: {
     currentQuestion: Object,
-    next: Function
+    next: Function,
+    increment: Function
   },
   data() {
     return {
-      selectedAnswer: null
+      selectedAnswer: null,
+      correctAnswer: null,
+      shuffledAnswers: [],
+      answered: false
     };
   },
   computed: {
@@ -43,22 +48,51 @@ export default {
     }
   },
   watch: {
-      currentQuestion() {
-          this.selectedAnswer = null
-          this.shuffleAnswers()
+    currentQuestion: {
+      immediate: true,
+      handler() {
+        this.selectedAnswer = null;
+        this.answered = false;
+        this.shuffleAnswers();
       }
+    }
   },
   methods: {
     selectAnswer(answer) {
       this.selectedAnswer = answer;
       console.log(answer);
     },
-    shuffleAnswers(){
-        let answers = [...this.currentQuestion.incorrect_answers, this.currentQuestion.correct_answer]
+    shuffleAnswers() {
+      let answers = [
+        ...this.currentQuestion.incorrect_answers,
+        this.currentQuestion.correct_answer
+      ];
+      this.shuffledAnswers = _.shuffle(answers);
+      this.correctAnswer = this.currentQuestion.correct_answer;
+    },
+    submitAnswer() {
+      let isCorrect = false;
+
+      if (this.selectedAnswer === this.correctAnswer) {
+        isCorrect = true;
+      }
+      this.answered = true;
+
+      this.increment(isCorrect);
+    },
+    answerClass(answer){
+      let answerClass = ""
+
+      if(!this.answered && this.selectedAnswer === answer){
+        answerClass = "selected"
+      } else if (this.answered && this.correctAnswer=== answer ){
+        answerClass = "correct"
+      } else if(this.answered && this.selectedAnswer === answer && this.correctAnswer !== answer){
+        answerClass = "incorrect"
+      }
+
+      return answerClass
     }
-  },
-  mounted() {
-    console.log(this.currentQuestion);
   }
 };
 </script>
@@ -85,7 +119,7 @@ export default {
   background-color: lightgreen;
 }
 
-.wrong {
+.incorrect {
   background-color: red;
 }
 </style>
